@@ -1,0 +1,80 @@
+﻿@page "/ProdutoDetalhes/{Id:int}"
+
+<NavMenu />
+
+@if(Produto is null && MensagemErro is null)
+{
+    <ExibirSpinner />
+}
+else if(MensagemErro is not null)
+{
+    <ExibirErro MensagemErro="@MensagemErro"></ExibirErro>
+}
+else
+{
+    <h3 class="mb-5"> Detalhes</h3>
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <img class="img-fluid" src="@Produto.Imagem" />
+        </div>
+        <div class="col-md-6">
+            <h3>@Produto.Nome</h3>
+            <p class="mb-4">@Produto.Descricao</p>
+            <p class="mb-4">
+                <b>
+                    @Produto.Preco.ToString("c")&nbsp;(@Produto.Quantidade items)
+                </b>
+            </p>
+            <div>
+                <button class="btn btn-success"
+                @onclick="() => AdicionarAoCarrinho_Click(new CarrinhoItemAdicionaDto{
+                    CarrinhoId = UsuarioLogado.CarrinhoId,
+                    ProdutoId = Produto.Id,
+                    Quantidade = 1
+                })">
+                Adicionar ao carrinho</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Inject]
+    public IProdutoService? ProdutoService { get; set; }
+    [Inject]
+    public ICarrinhoCompraService? carrinhoCompraService { get; set; }
+    [Inject]
+    NavigationManager? navigationManager { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+    public ProdutoDto? Produto { get; set; }
+    public string? MensagemErro { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Produto = await ProdutoService.GetItem(Id);
+        }
+        catch (Exception ex)
+        {
+            MensagemErro = ex.Message;
+        }
+    }
+
+    protected async Task AdicionarAoCarrinho_Click(CarrinhoItemAdicionaDto carrinhoItemAdicionaDto)
+    {
+        try
+        {
+            var carrinhoItemDto = await carrinhoCompraService.AdicionaItem(carrinhoItemAdicionaDto);
+            navigationManager.NavigateTo("/CarrinhoCompra");
+        }
+        catch (Exception)
+        {
+            
+            throw;
+        }
+    }
+
+}

@@ -1,0 +1,181 @@
+﻿@page "/CarrinhoCompra"
+@inject IJSRuntime Js;
+
+<NavMenu />
+
+
+
+@if (CarrinhoCompraItens is null && MensagemErro is null)
+{
+    <ExibirSpinner />
+}
+else if (MensagemErro is not null)
+{
+    <ExibirErro MensagemErro="@MensagemErro"></ExibirErro>
+}
+else
+{
+    <h3 class="mb-5">Carrinho</h3>
+        @if (CarrinhoCompraItens.Count() > 0)
+        {
+            <div class="row mb-5">
+                <div class="col-md-9">
+                    @foreach (var item in CarrinhoCompraItens)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <img src="@item.ProdutoImagemUrl" width="250" class="img-thumbnail">
+                            </div>
+                            <div class="col-md-9">
+                                <h5>@item.ProdutoNome</h5>
+                                <div class="mb-4">
+                                    @item.ProdutoDescricao
+                                </div>
+                            <span>
+                                Preço: <b>@item.Preco.ToString("C")</b>
+                                <br>
+                                <button @onclick="(()=> DeletaCarrinhoItem_Click(item.Id))" class="btn btn-danger sm">
+                                    <span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z" />
+                                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z" />
+                                        </svg>
+                                    </span>
+                                </button>
+                            </span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="col-md-3">
+                    <h5>Carrinho - Resumo</h5>
+                    <div class="mt-2">
+                        <div>Total - (@QuantidadeTotal items)&nbsp;<br /><b>@PrecoTotal</b></div>
+                        <a href="#" class="btn btn-success">
+                        <span class="oi oi-credit-card"></span>&nbsp; Fechar Pedido
+                        </a>
+                </div>
+            </div>
+            </div>
+        }
+        else
+        {
+            <div>
+                <h3><b>Seu carrinho esta vazio</b></h3>
+            </div>
+        }
+    }
+
+@code {
+    [Inject]
+    public ICarrinhoCompraService? carrinhoCompraService { get; set; }
+
+    public List<CarrinhoItemDto>? CarrinhoCompraItens { get; set; }
+
+
+    public string? MensagemErro { get; set; }
+    protected string? PrecoTotal { get; set; }
+    protected int QuantidadeTotal { get; set; }
+
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            CarrinhoCompraItens = await carrinhoCompraService.GetItens(UsuarioLogado.UsuarioId);
+
+            CarrinhoChanged();
+        }
+        catch (Exception ex)
+        {
+            MensagemErro = ex.Message;
+        }
+    }
+
+    protected async Task DeletaCarrinhoItem_Click(int id)
+    {
+        var carrinhoItemDto = await carrinhoCompraService.DeletaItem(id);
+
+        await RemoveCarrinhoItem(id);
+
+        CarrinhoChanged();
+    }
+
+    private CarrinhoItemDto GetCarrinhoItem(int id)
+    {
+        return CarrinhoCompraItens.FirstOrDefault(i => i.Id == id);
+    }
+
+    private async Task RemoveCarrinhoItem(int id)
+    {
+        var carrinhoItemDto = GetCarrinhoItem(id);
+        CarrinhoCompraItens.Remove(carrinhoItemDto);
+
+
+    }
+
+    // protected async Task AtualizaQuantidadeCarrinhoItem_Click(int id, int quantidade)
+    // {
+    //     try
+    //     {
+    //         if (quantidade > 0)
+    //         {
+    //             var atualizaItemDto = new CarrinhoItemAtualizaQuantidadeDto
+    //                 {
+    //                     CarrinhoItemId = id,
+    //                     Quantidade = quantidade
+    //                 };
+
+    //             var retornaItemAtualizadoDto = await carrinhoCompraService.AtualizaQuantidade(atualizaItemDto);
+
+    //             AtualizaPrecoTotalItem(retornaItemAtualizadoDto);
+    //             CarrinhoChanged();
+    //         }
+    //         else
+    //         {
+    //             var item = CarrinhoCompraItens.FirstOrDefault(i => i.Id == id);
+    //             if (item is not null)
+    //             {
+    //                 item.Quantidade = 1;
+    //                 item.PrecoTotal = item.Preco;
+    //             }
+    //         }
+    //     }
+    //     catch (Exception)
+    //     {
+    //         throw;
+    //     }
+    // }
+    private void SetPrecoTotal()
+    {
+        PrecoTotal = CarrinhoCompraItens.Sum(p => p.PrecoTotal).ToString("C");
+    }
+    private void SetQuantidadeTotal()
+    {
+        QuantidadeTotal = CarrinhoCompraItens.Sum(p => p.Quantidade);
+    }
+
+    private void CalculaResumoCarrinhoTotal()
+    {
+        SetQuantidadeTotal();
+        SetPrecoTotal();
+    }
+
+    private async Task AtualizaPrecoTotalItem(CarrinhoItemDto carrinhoItemDto)
+    {
+        var item = GetCarrinhoItem(carrinhoItemDto.Id);
+
+        if (item != null)
+        {
+            item.PrecoTotal = carrinhoItemDto.Preco * carrinhoItemDto.Quantidade;
+        }
+    }
+
+    private void CarrinhoChanged()
+    {
+        CalculaResumoCarrinhoTotal();
+        carrinhoCompraService.RaiseEventOnCarrinhoCompraChanged(QuantidadeTotal);
+    }
+}

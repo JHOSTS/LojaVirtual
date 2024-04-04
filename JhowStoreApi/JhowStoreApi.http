@@ -1,0 +1,6 @@
+@JhowStoreApi_HostAddress = http://localhost:5160
+
+GET {{JhowStoreApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
